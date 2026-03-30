@@ -5,7 +5,7 @@ import argparse
 import matplotlib.pyplot as plt
 import torch
 
-from src.data.synthetic import signed_linear_measurements, xor_d2_fig3_bottom
+from src.data.synthetic import signed_linear_measurements, x_shaped_d2_fig2_top
 from src.losses.metrics import classification_error
 from src.models.init import init_first_layer, init_second_layer
 from src.models.linear import LinearBinary
@@ -55,7 +55,7 @@ def main() -> None:
         lin_curves[b] = hist
 
     # Bottom: two-layer NN on XOR dataset (d=2, n=40), SNGD with per-b eta
-    ds = xor_d2_fig3_bottom(seed=args.seed)
+    ds = x_shaped_d2_fig2_top(seed=args.seed)
     b_list_nn = [1, 4, 10, 20, 40]
     nn_curves = {}
     for b in b_list_nn:
