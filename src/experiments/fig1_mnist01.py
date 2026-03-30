@@ -73,6 +73,7 @@ def main() -> None:
     plt.plot(it_ngd, [100.0 * r.get("test_error", 0.0) for r in ngd_hist], label="Normalized GD")
     plt.title("Test Error (%)")
     plt.xlabel("Iteration")
+    plt.ylim(0, 1.5)
     plt.legend()
 
     plt.subplot(1, 3, 3)
