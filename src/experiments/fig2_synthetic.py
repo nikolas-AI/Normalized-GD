@@ -4,7 +4,7 @@ import argparse
 
 import matplotlib.pyplot as plt
 
-from src.data.synthetic import gaussian_mixture_d2_fig2_top, gaussian_mixture_d5_fig2_bottom
+from src.data.synthetic import x_shaped_d2_fig2_top, x_shaped_d5_fig2_bottom
 from src.models.init import init_first_layer, init_second_layer
 from src.models.two_layer_fixed_a import TwoLayerFixedA
 from src.train.engine import TrainParams, run_training
@@ -28,37 +28,45 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--steps_top", type=int, default=1000)
-    ap.add_argument("--steps_bottom", type=int, default=2500)
+    ap.add_argument("--steps_bottom", type=int, default=2000)
     args = ap.parse_args()
     set_seed(args.seed, deterministic=True)
     run_dir = make_run_dir(name=f"fig2_synth_seed{args.seed}")
 
-    top = gaussian_mixture_d2_fig2_top(seed=args.seed)
-    bot = gaussian_mixture_d5_fig2_bottom(seed=args.seed)
+    top = x_shaped_d2_fig2_top(seed=args.seed)
+    bot = x_shaped_d5_fig2_bottom(seed=args.seed)
 
-    top_gd, top_ngd = _run_case(top.X, top.y, m=50, eta_gd=80.0, eta_ngd=30.0, steps=args.steps_top, seed=args.seed)
-    bot_gd, bot_ngd = _run_case(bot.X, bot.y, m=100, eta_gd=350.0, eta_ngd=20.0, steps=args.steps_bottom, seed=args.seed)
+    # eta_gd: moderate rate — converges slowly (GD slows as gradient norm shrinks near 0)
+    # eta_ngd: fixed step size after global-norm normalization — converges much faster
+    top_gd, top_ngd = _run_case(top.X, top.y, m=50, eta_gd=3.0, eta_ngd=3.0, steps=args.steps_top, seed=args.seed)
+    bot_gd, bot_ngd = _run_case(bot.X, bot.y, m=100, eta_gd=5.0, eta_ngd=5.0, steps=args.steps_bottom, seed=args.seed)
 
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+
+    # Scatter plots — match paper marker style (+/x)
     for ax, ds, ttl in [
-        (axes[0, 0], top, "Synthetic d=2"),
-        (axes[1, 0], bot, "Synthetic d=5 (first 2 dims)"),
+        (axes[0, 0], top, "Synthetic d=2, n=40"),
+        (axes[1, 0], bot, "Synthetic d=5, n=40 (dims 1–2)"),
     ]:
         mask = ds.y > 0
-        ax.scatter(ds.X[~mask, 0], ds.X[~mask, 1], label="-1")
-        ax.scatter(ds.X[mask, 0], ds.X[mask, 1], label="+1")
+        ax.scatter(ds.X[~mask, 0].numpy(), ds.X[~mask, 1].numpy(),
+                   marker="x", color="tab:blue", s=60, linewidths=1.5)
+        ax.scatter(ds.X[mask, 0].numpy(), ds.X[mask, 1].numpy(),
+                   marker="+", color="tab:green", s=80, linewidths=1.5)
         ax.set_title(ttl)
+
+    # Loss plots — log scale, both optimizers
+    for ax, gd_hist, ngd_hist, steps in [
+        (axes[0, 1], top_gd, top_ngd, args.steps_top),
+        (axes[1, 1], bot_gd, bot_ngd, args.steps_bottom),
+    ]:
+        ax.semilogy([r["iter"] for r in gd_hist], [r["train_loss"] for r in gd_hist],
+                    color="tab:blue", label="GD")
+        ax.semilogy([r["iter"] for r in ngd_hist], [r["train_loss"] for r in ngd_hist],
+                    color="tab:orange", label="Normalized GD")
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("Training Loss")
         ax.legend()
-
-    axes[0, 1].semilogy([r["iter"] for r in top_gd], [r["train_loss"] for r in top_gd], label="GD")
-    axes[0, 1].semilogy([r["iter"] for r in top_ngd], [r["train_loss"] for r in top_ngd], label="Normalized GD")
-    axes[0, 1].set_title("Top: Training Loss")
-    axes[0, 1].legend()
-
-    axes[1, 1].semilogy([r["iter"] for r in bot_gd], [r["train_loss"] for r in bot_gd], label="GD")
-    axes[1, 1].semilogy([r["iter"] for r in bot_ngd], [r["train_loss"] for r in bot_ngd], label="Normalized GD")
-    axes[1, 1].set_title("Bottom: Training Loss")
-    axes[1, 1].legend()
 
     plt.tight_layout()
     plt.savefig(run_dir / "figure2_like.png", dpi=160)
@@ -72,4 +80,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

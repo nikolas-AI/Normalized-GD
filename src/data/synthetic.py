@@ -83,6 +83,64 @@ def gaussian_mixture_d5_fig2_bottom(*, n: int = 40, seed: int = 0, device: torch
     return gaussian_mixture_zero_mean(n=n, d=d, Sigma0=Sigma0, Sigma1=Sigma1, seed=seed, device=device)
 
 
+def x_shaped_d2_fig2_top(
+    *,
+    n: int = 40,
+    noise_std: float = 0.2,
+    t_scale: float = 4.0,
+    seed: int = 0,
+    device: torch.device | None = None,
+) -> SyntheticDataset:
+    """
+    X-shaped binary dataset for Fig 2 (top, d=2).
+    Class +1 (+1): x = t*[1,1] + noise, class -1 (-1): x = t*[1,-1] + noise.
+    """
+    if n % 2 != 0:
+        raise ValueError("n must be even")
+    g = torch.Generator(device="cpu").manual_seed(int(seed))
+    n_half = n // 2
+
+    t0 = (torch.rand(n_half, generator=g, dtype=torch.float64) * 2 - 1) * t_scale
+    t1 = (torch.rand(n_half, generator=g, dtype=torch.float64) * 2 - 1) * t_scale
+    noise0 = torch.randn(n_half, 2, generator=g, dtype=torch.float64) * noise_std
+    noise1 = torch.randn(n_half, 2, generator=g, dtype=torch.float64) * noise_std
+
+    dir0 = torch.tensor([1.0, -1.0], dtype=torch.float64)
+    dir1 = torch.tensor([1.0, 1.0], dtype=torch.float64)
+
+    X0 = t0.unsqueeze(1) * dir0 + noise0
+    X1 = t1.unsqueeze(1) * dir1 + noise1
+
+    X = torch.cat([X0, X1], dim=0).to(torch.float32)
+    y = _labels_pm1(n_half, n_half)
+
+    if device is not None:
+        X = X.to(device)
+        y = y.to(device)
+    return SyntheticDataset(X=X, y=y)
+
+
+def x_shaped_d5_fig2_bottom(
+    *,
+    n: int = 40,
+    noise_std: float = 0.1,
+    t_scale: float = 1.5,
+    seed: int = 0,
+    device: torch.device | None = None,
+) -> SyntheticDataset:
+    """
+    X-shaped dataset embedded in d=5 for Fig 2 (bottom).
+    First 2 dims are the X-shape; last 3 dims are small Gaussian noise.
+    """
+    ds2 = x_shaped_d2_fig2_top(n=n, noise_std=noise_std, t_scale=t_scale, seed=seed)
+    g = torch.Generator(device="cpu").manual_seed(int(seed) + 9999)
+    extra = torch.randn(n, 3, generator=g, dtype=torch.float32) * noise_std
+    X = torch.cat([ds2.X, extra], dim=1)
+    if device is not None:
+        X = X.to(device)
+    return SyntheticDataset(X=X, y=ds2.y.to(device) if device is not None else ds2.y)
+
+
 def signed_linear_measurements(
     *,
     n: int = 100,

@@ -82,7 +82,8 @@ def run_training(
             loss = _full_loss(model, X_train, y_train)
             loss.backward()
             grad = model.W.grad.detach().clone()
-            W_next = ngd_step(model.W.detach(), grad, eta_base=params.eta, F_scalar=loss.detach())
+            grad_norm = grad.norm()
+            W_next = ngd_step(model.W.detach(), grad, eta_base=params.eta, F_scalar=grad_norm, eps=1e-12)
             apply_update_(model.W, W_next)
         elif params.optim == "sngd":
             full_loss = _full_loss(model, X_train, y_train).detach()
