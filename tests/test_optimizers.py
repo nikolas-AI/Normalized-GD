@@ -29,12 +29,12 @@ def test_ngd_step_formula():
     assert torch.allclose(out, W - (eta_base / F) * G)
 
 
-def test_sngd_equals_ngd_when_same_gradient():
+def test_sngd_normalizes_by_batch_grad_norm():
     W = torch.randn(3, 4)
     grad = torch.randn(3, 4)
     eta_base = 3.0
-    F = 0.75
-    out1 = ngd_step(W, grad, eta_base, F)
-    out2 = sngd_step(W, grad, eta_base, F)
-    assert torch.allclose(out1, out2)
+    out = sngd_step(W, grad, eta_base)
+    grad_norm = grad.norm()
+    expected = W - (eta_base / grad_norm) * grad
+    assert torch.allclose(out, expected)
 

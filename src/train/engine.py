@@ -86,7 +86,6 @@ def run_training(
             W_next = ngd_step(model.W.detach(), grad, eta_base=params.eta, F_scalar=grad_norm, eps=1e-12)
             apply_update_(model.W, W_next)
         elif params.optim == "sngd":
-            full_loss = _full_loss(model, X_train, y_train).detach()
             if batch_iter is None:
                 batch_iter = iter(
                     iterate_minibatches(
@@ -113,7 +112,7 @@ def run_training(
             batch_loss = _full_loss(model, xb, yb)
             batch_loss.backward()
             grad_b = model.W.grad.detach().clone()
-            W_next = sngd_step(model.W.detach(), grad_b, eta_base=params.eta, F_full=full_loss)
+            W_next = sngd_step(model.W.detach(), grad_b, eta_base=params.eta)
             apply_update_(model.W, W_next)
         else:
             raise ValueError(f"Unknown optimizer: {params.optim!r}")

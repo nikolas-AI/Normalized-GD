@@ -141,6 +141,48 @@ def x_shaped_d5_fig2_bottom(
     return SyntheticDataset(X=X, y=ds2.y.to(device) if device is not None else ds2.y)
 
 
+def xor_d2_fig3_bottom(
+    *,
+    n: int = 40,
+    scale: float = 2.5,
+    noise_std: float = 0.35,
+    seed: int = 0,
+    device: torch.device | None = None,
+) -> SyntheticDataset:
+    """
+    XOR-style binary dataset for Fig 3 (bottom-left, d=2, n=40).
+    Class +1: quadrants 1 (+,+) and 3 (-,-).
+    Class -1: quadrants 2 (-,+) and 4 (+,-).
+    Points are uniformly sampled in each quadrant then Gaussian noise is added.
+    """
+    if n % 4 != 0:
+        raise ValueError("n must be divisible by 4")
+    g = torch.Generator(device="cpu").manual_seed(int(seed))
+    q = n // 4  # points per quadrant
+
+    def _quad(sx: float, sy: float) -> torch.Tensor:
+        pts = torch.rand(q, 2, generator=g, dtype=torch.float64) * scale + 0.3
+        return pts * torch.tensor([sx, sy], dtype=torch.float64)
+
+    # Class -1 (label −1): Q2 (-,+) and Q4 (+,-)
+    X_neg = torch.cat([_quad(-1, 1), _quad(1, -1)], dim=0)
+    noise_neg = torch.randn(2 * q, 2, generator=g, dtype=torch.float64) * noise_std
+    X_neg = X_neg + noise_neg
+
+    # Class +1 (label +1): Q1 (+,+) and Q3 (-,-)
+    X_pos = torch.cat([_quad(1, 1), _quad(-1, -1)], dim=0)
+    noise_pos = torch.randn(2 * q, 2, generator=g, dtype=torch.float64) * noise_std
+    X_pos = X_pos + noise_pos
+
+    X = torch.cat([X_neg, X_pos], dim=0).to(torch.float32)
+    y = _labels_pm1(2 * q, 2 * q)
+
+    if device is not None:
+        X = X.to(device)
+        y = y.to(device)
+    return SyntheticDataset(X=X, y=y)
+
+
 def signed_linear_measurements(
     *,
     n: int = 100,
