@@ -4,7 +4,7 @@ import argparse
 
 import matplotlib.pyplot as plt
 
-from src.data.synthetic import x_shaped_d2_fig2_top, x_shaped_d5_fig2_bottom
+from src.data.synthetic import gaussian_mixture_d2_fig2_top, gaussian_mixture_d5_fig2_bottom
 from src.models.init import init_first_layer, init_second_layer
 from src.models.two_layer_fixed_a import TwoLayerFixedA
 from src.train.engine import TrainParams, run_training
@@ -33,20 +33,19 @@ def main() -> None:
     set_seed(args.seed, deterministic=True)
     run_dir = make_run_dir(name=f"fig2_synth_seed{args.seed}")
 
-    top = x_shaped_d2_fig2_top(seed=args.seed)
-    bot = x_shaped_d5_fig2_bottom(seed=args.seed)
+    top = gaussian_mixture_d2_fig2_top(seed=args.seed)
+    bot = gaussian_mixture_d5_fig2_bottom(seed=args.seed)
 
-    # eta_gd: moderate rate — converges slowly (GD slows as gradient norm shrinks near 0)
-    # eta_ngd: fixed step size after global-norm normalization — converges much faster
-    top_gd, top_ngd = _run_case(top.X, top.y, m=50, eta_gd=3.0, eta_ngd=3.0, steps=args.steps_top, seed=args.seed)
-    bot_gd, bot_ngd = _run_case(bot.X, bot.y, m=100, eta_gd=5.0, eta_ngd=5.0, steps=args.steps_bottom, seed=args.seed)
+    # Step-sizes fine-tuned per paper: η=80,350 for GD and η=30,20 for normalized GD
+    top_gd, top_ngd = _run_case(top.X, top.y, m=50, eta_gd=80, eta_ngd=30, steps=args.steps_top, seed=args.seed)
+    bot_gd, bot_ngd = _run_case(bot.X, bot.y, m=100, eta_gd=350, eta_ngd=20, steps=args.steps_bottom, seed=args.seed)
 
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
 
     # Scatter plots — match paper marker style (+/x)
     for ax, ds, ttl in [
-        (axes[0, 0], top, "Synthetic d=2, n=40"),
-        (axes[1, 0], bot, "Synthetic d=5, n=40 (dims 1–2)"),
+        (axes[0, 0], top, "GMM d=2, n=40 (diff. covariances)"),
+        (axes[1, 0], bot, "GMM d=5, n=40, Σ₁=I, Σ₂=¼I (dims 1–2)"),
     ]:
         mask = ds.y > 0
         ax.scatter(ds.X[~mask, 0].numpy(), ds.X[~mask, 1].numpy(),
@@ -67,6 +66,7 @@ def main() -> None:
         ax.set_xlabel("Iteration")
         ax.set_ylabel("Training Loss")
         ax.legend()
+    axes[0, 1].set_ylim(1e-2, 1e0)
 
     plt.tight_layout()
     plt.savefig(run_dir / "figure2_like.png", dpi=160)

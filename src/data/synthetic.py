@@ -70,9 +70,13 @@ def gaussian_mixture_zero_mean(
 
 def gaussian_mixture_d2_fig2_top(*, n: int = 40, seed: int = 0, device: torch.device | None = None) -> SyntheticDataset:
     d = 2
-    # Different covariances (paper doesn't specify exact values)
-    Sigma0 = torch.tensor([[1.0, 0.8], [0.8, 1.0]])
-    Sigma1 = torch.tensor([[1.0, -0.6], [-0.6, 1.5]])
+    # X-shaped GMM: each class is a zero-mean Gaussian elongated along one diagonal.
+    # Sigma = lambda_large * u*u^T + lambda_small * v*v^T
+    # u = [1,1]/sqrt(2), v = [1,-1]/sqrt(2), lambda_large=4, lambda_small=0.1
+    # Class -1: elongated along [1,-1]  -> Sigma0 = [[2.05, -1.95], [-1.95, 2.05]]
+    # Class +1: elongated along [1, 1]  -> Sigma1 = [[2.05,  1.95], [ 1.95, 2.05]]
+    Sigma0 = torch.tensor([[2.05, -1.95], [-1.95, 2.05]])
+    Sigma1 = torch.tensor([[2.05,  1.95], [ 1.95, 2.05]])
     return gaussian_mixture_zero_mean(n=n, d=d, Sigma0=Sigma0, Sigma1=Sigma1, seed=seed, device=device)
 
 
