@@ -6,8 +6,8 @@
 
 This project implements and empirically evaluates **Normalized Gradient Descent (NGD)** and its stochastic variant (SNGD) applied to binary classification with two-layer neural networks. It reproduces three figures from a research paper:
 
-- **Figure 1** — MNIST 0-vs-1 classification: GD vs NGD on a linear model
-- **Figure 2** — Synthetic X-shaped data: GD vs NGD on a two-layer NN (d=2 and d=5)
+- **Figure 1** — MNIST 0-vs-1 classification: GD vs NGD on a two-layer NN (m=50)
+- **Figure 2** — Synthetic data: GD vs NGD on a two-layer NN (d=2 and d=5)
 - **Figure 3** — Stochastic NGD: varying batch sizes on a linear model and two-layer NN
 
 **Key idea:** Standard gradient descent slows as the gradient norm shrinks near a solution. NGD normalizes the gradient by its global L2 norm before each update, maintaining a fixed step size throughout training and converging significantly faster on separable problems.
@@ -40,9 +40,9 @@ pj3/
 │   │
 │   ├── data/
 │   │   ├── __init__.py
-│   │   ├── mnist01.py            ← MNIST 0/1 loader → {+1, -1} labels
-│   │   ├── synthetic.py          ← X-shaped, XOR, and linear synthetic datasets
-│   │   └── sanity.py             ← quick checks on data tensors
+│   │   ├── mnist01.py            ← MNIST 0/1 loader → {+1, -1} labels; returns Mnist01Splits
+│   │   ├── synthetic.py          ← GMM, X-shaped, XOR, and linear synthetic datasets
+│   │   └── sanity.py             ← data inspection script; generates scatter plots + stats JSON
 │   │
 │   ├── losses/
 │   │   ├── __init__.py
@@ -74,8 +74,12 @@ pj3/
 │   ├── experiments/
 │   │   ├── __init__.py
 │   │   ├── fig1_mnist01.py       ← Figure 1: MNIST GD vs NGD
-│   │   ├── fig2_synthetic.py     ← Figure 2: X-shaped data GD vs NGD
+│   │   ├── fig2_synthetic.py     ← Figure 2: Synthetic data GD vs NGD
 │   │   └── fig3_sngd.py          ← Figure 3: SNGD batch-size sweep
+│   │
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   └── gradcheck_fd.py       ← finite-difference gradient checker for TwoLayerFixedA
 │   │
 │   └── utils/
 │       ├── __init__.py
@@ -97,8 +101,22 @@ pj3/
 │
 └── runs/                         ← generated at runtime, one subdir per experiment
     ├── fig1_mnist01_seed0/
+    │   ├── gd/                   ← metrics.csv + meta.json for GD run
+    │   ├── ngd/                  ← metrics.csv + meta.json for NGD run
+    │   ├── figure1_like.png
+    │   └── summary.json
     ├── fig2_synth_seed0/
-    └── fig3_sngd_seed0/
+    │   ├── figure2_like.png
+    │   └── summary.json
+    ├── fig3_sngd_seed0/
+    │   ├── linear_b{1,4,10,50,100}/  ← metrics.csv + meta.json per batch size
+    │   ├── nn_b{1,4,10,20,40}/       ← metrics.csv + meta.json per batch size
+    │   ├── figure3_like.png
+    │   └── summary.json
+    └── phase3_data_seed0/        ← from src/data/sanity.py
+        ├── fig2_top_scatter.png
+        ├── fig2_bottom_scatter.png
+        └── data_stats.json
 ```
 
 ---
@@ -130,9 +148,13 @@ pj3/
 
 | Name | Type | Inputs | Outputs | Description |
 |---|---|---|---|---|
-| `load_mnist01` | function | `root`, `n_train`, `n_test`, `seed`, `device` | `(SyntheticDataset_train, SyntheticDataset_test)` | Downloads MNIST if absent, filters to classes {0,1}, relabels 0→−1 and 1→+1, flattens 28×28→784, optionally subsamples |
+| `Mnist01Splits` | frozen dataclass | — | — | Holds `X_train (n,784)`, `y_train (n,)`, `X_test (N,784)`, `y_test (N,)` |
+| `load_mnist` | function | `root`, `train: bool` | `(X, y_digit)` | Downloads full MNIST split; returns raw (N,1,28,28) float32 X and int64 digit labels |
+| `filter_mnist_01` | function | `X`, `y_digit` | `(X01, y_pm1)` | Keeps only digits {0,1}; relabels 0→−1, 1→+1 |
+| `subsample` | function | `X`, `y`, `n`, `generator` | `(X_sub, y_sub)` | Random subsample of n rows via `torch.randperm` |
+| `get_mnist01_splits` | function | `root`, `n_train`, `seed` | `Mnist01Splits` | Main entry point: calls above helpers, subsamples train to `n_train`, flattens to (N,784) |
 
-**Key logic:** Uses `torchvision.datasets.MNIST` with `download=True`. Labels: digit 1 → +1, digit 0 → −1. Returns standard `SyntheticDataset` namedtuples reused across all datasets.
+**Key logic:** Uses `torchvision.datasets.MNIST` with `download=True`. Labels: digit 1 → +1, digit 0 → −1. Training split is subsampled; full test split is returned without subsampling. Returns `Mnist01Splits` (not `SyntheticDataset`).
 
 ---
 
@@ -145,20 +167,30 @@ pj3/
 | `SyntheticDataset` | frozen dataclass | Holds `X: (n,d) float32`, `y: (n,) float32 ∈ {±1}` |
 | `_labels_pm1` | function | Creates label vector: first `n0` entries are −1, next `n1` are +1 |
 | `gaussian_mixture_zero_mean` | function | Zero-mean GMM; class covariances Σ₀, Σ₁ supplied explicitly |
-| `gaussian_mixture_d2_fig2_top` | function | d=2 GMM with correlated covariances (legacy, kept for tests) |
-| `gaussian_mixture_d5_fig2_bottom` | function | d=5 GMM with Σ₀=I, Σ₁=0.25·I (legacy) |
-| `x_shaped_d2_fig2_top` | function | **Active fig2 dataset.** 20 pts along t·[1,1]+noise (class +1), 20 along t·[1,−1]+noise (class −1); `noise_std=0.2`, `t_scale=4.0` |
-| `x_shaped_d5_fig2_bottom` | function | X-shaped in first 2 dims, 3 extra Gaussian noise dims appended; `noise_std=0.1`, `t_scale=1.5` |
-| `xor_d2_fig3_bottom` | function | XOR pattern: class +1 in Q1&Q3, class −1 in Q2&Q4 (legacy, superseded by x_shaped for fig3) |
+| `gaussian_mixture_d2_fig2_top` | function | d=2 GMM with X-shaped covariance structure: class −1 elongated along [1,−1], class +1 along [1,1]; used by `src/data/sanity.py` |
+| `gaussian_mixture_d5_fig2_bottom` | function | d=5 GMM with Σ₀=I, Σ₁=0.25·I; **active fig2 bottom dataset** |
+| `x_shaped_d2_fig2_top` | function | **Active fig2 top and fig3 bottom dataset.** 20 pts along t·[1,1]+noise (class +1), 20 along t·[1,−1]+noise (class −1); `noise_std=0.2`, `t_scale=4.0` |
+| `x_shaped_d5_fig2_bottom` | function | X-shaped in first 2 dims, 3 extra Gaussian noise dims appended; `noise_std=0.1`, `t_scale=1.5` (unused by current experiment scripts) |
+| `xor_d2_fig3_bottom` | function | XOR pattern: class +1 in Q1&Q3, class −1 in Q2&Q4 (unused by current experiment scripts) |
 | `signed_linear_measurements` | function | Fig3 linear data: `y = sign(Xw*)`, d=50, n=100; returns dataset + ground-truth `w*` |
 
-**Key logic for X-shaped data:**
+**Key logic for X-shaped data (`x_shaped_d2_fig2_top`):**
 ```
 t ~ Uniform[-t_scale, t_scale]
 Class +1: x = t·[1, 1] + N(0, noise_std²·I)
 Class -1: x = t·[1,-1] + N(0, noise_std²·I)
 ```
-The classes are **not linearly separable** but are separable by a two-layer NN with enough neurons.
+The classes overlap near the origin and are **not linearly separable** but are separable by a two-layer NN with enough neurons. Used for Fig 2 top and Fig 3 bottom.
+
+---
+
+### `src/data/sanity.py`
+
+**Purpose:** Standalone data inspection script. Loads MNIST 0/1 splits and the synthetic datasets used in Figs 2–3, saves shape/label statistics to `data_stats.json`, and writes scatter plots for the two Fig 2 datasets to the run directory.
+
+Run via: `python -m src.data.sanity [--seed N] [--mnist_root PATH]`
+
+Output directory: `runs/phase3_data_seed<N>/`
 
 ---
 
@@ -214,7 +246,7 @@ The classes are **not linearly separable** but are separable by a two-layer NN w
 
 | Name | Type | Inputs | Outputs | Description |
 |---|---|---|---|---|
-| `two_layer_forward` | function | `x: (b,d)`, `W: (m,d)`, `a: (m,)`, `alpha`, `ell` | `(b,)` | Computes `a · σ(W x)` without a module wrapper |
+| `phi` | function | `W: (m,d)`, `a: (m,)`, `x: (b,d)`, `alpha`, `ell` | `(b,)` | Computes `a · σ(W x)` without a module wrapper; validates shapes |
 
 ---
 
@@ -335,6 +367,20 @@ phi = h @ a          # (batch,)   — scalar prediction per sample
 
 ---
 
+### `src/tests/gradcheck_fd.py`
+
+**Purpose:** A more detailed finite-difference gradient checker specifically for `TwoLayerFixedA`, operating in float64 for numerical stability. Used by `tests/test_gradcheck.py`.
+
+| Name | Type | Description |
+|---|---|---|
+| `GradcheckResult` | frozen dataclass | Holds `max_abs_err` and `max_rel_err` from a gradient check run |
+| `finite_difference_grad_W` | function | Computes ∂L/∂W numerically via central differences `(f(W+ε) − f(W−ε)) / 2ε`; upcasts to float64 |
+| `gradcheck_autograd_vs_fd` | function | Compares autograd gradient against FD estimate; raises `AssertionError` on mismatch; returns `GradcheckResult` |
+
+**Key logic:** Uses `src/models/functional.phi` (stateless forward) so there is no module state to manage. Operates in float64 for the FD pass to avoid cancellation error.
+
+---
+
 ### `src/train/engine.py`
 
 **Purpose:** Unified training loop supporting all three optimizers (GD, NGD, SNGD). Returns a list of per-step metric dicts.
@@ -408,34 +454,34 @@ elif optim == "sngd":
 
 ### `src/experiments/fig1_mnist01.py`
 
-**Purpose:** Generates Figure 1 — MNIST 0-vs-1 classification comparing GD and NGD on a **linear model**.
+**Purpose:** Generates Figure 1 — MNIST 0-vs-1 classification comparing GD and NGD on a **two-layer NN**.
 
 **Key parameters:**
-- Dataset: MNIST digits {0,1}, `n_train=1000`, `n_test=500`, d=784
-- Model: `LinearBinary(d=784, init_zero=True)`
-- Optimizers: GD (`eta=0.01`) and NGD (`eta=0.01`)
-- Steps: 500
+- Dataset: MNIST digits {0,1}, `n_train=1000`, full test split, d=784
+- Model: `TwoLayerFixedA(m=50, d=784)` — same initialized weights for both runs
+- Optimizers: GD (`eta=30.0`) and NGD (`eta=5.0`)
+- Steps: 100 (default; override with `--steps`)
 
-**Output:** `runs/fig1_mnist01_seed*/figure1_like.png` + `summary.json`
+**Output:** `runs/fig1_mnist01_seed*/figure1_like.png` + `summary.json`; per-optimizer `gd/` and `ngd/` subdirs with `metrics.csv` and `meta.json`
 
-**Plot:** Two subplots — training loss (log scale) and test error over iterations, both GD and NGD on each.
+**Plot:** Three subplots — training loss (log scale), test error (%), and weight norm over iterations.
 
 ---
 
 ### `src/experiments/fig2_synthetic.py`
 
-**Purpose:** Generates Figure 2 — X-shaped synthetic data comparing GD vs NGD on a **two-layer NN**.
+**Purpose:** Generates Figure 2 — synthetic data comparing GD vs NGD on a **two-layer NN**.
 
 **Key parameters:**
 
 | Case | Dataset | m | eta_gd | eta_ngd | Steps |
 |---|---|---|---|---|---|
-| Top | `x_shaped_d2_fig2_top` (d=2) | 50 | 3.0 | 3.0 | 1000 |
-| Bottom | `x_shaped_d5_fig2_bottom` (d=5) | 100 | 5.0 | 5.0 | 2000 |
+| Top | `x_shaped_d2_fig2_top` (d=2) | 50 | 8.0 | 3.0 | 1000 |
+| Bottom | `gaussian_mixture_d5_fig2_bottom` (d=5) | 100 | 35.0 | 2.0 | 2000 |
 
 **Output:** `runs/fig2_synth_seed*/figure2_like.png` + `summary.json`
 
-**Plot:** 2×2 grid — scatter plots (left) and training loss in log scale (right) for each case.
+**Plot:** 2×2 grid — scatter plots (left, top uses x-shaped data, bottom uses GMM) and training loss in log scale (right) for each case.
 
 ---
 
@@ -465,7 +511,9 @@ elif optim == "sngd":
 
 **Output:** `runs/fig3_sngd_seed*/figure3_like.png` + `summary.json`
 
-**Plot:** 2×2 grid — linear training loss (top-left), test error (top-right), XOR scatter (bottom-left), NN training loss (bottom-right).
+**Linear test set:** 3000 samples generated from the same `w*` used for training labels.
+
+**Plot:** 2×2 grid — linear training loss (top-left), test error (top-right), X-shaped data scatter (bottom-left), NN training loss (bottom-right).
 
 ---
 
@@ -529,12 +577,13 @@ Same as NGD but the gradient is computed on a random mini-batch of size `b`. Gra
 
 ### 4.4 Data Pipeline
 
-**MNIST:** `torchvision` download → filter {0,1} → relabel 0↔−1, 1↔+1 → flatten → optional subsample → `SyntheticDataset`
+**MNIST:** `torchvision` download → filter {0,1} → relabel 0↔−1, 1↔+1 → flatten → subsample train to n_train → `Mnist01Splits`
 
-**X-shaped synthetic (Fig 2):**
+**X-shaped synthetic (Fig 2 top, Fig 3 bottom):**
 - Draw scalars `t ~ Uniform[−t_scale, t_scale]`
 - Class +1: `x = t·[1,1] + ε`, class −1: `x = t·[1,−1] + ε`, where `ε ~ N(0, noise_std²)`
-- For d=5: append 3 independent noise dimensions
+
+**GMM synthetic (Fig 2 bottom):** `gaussian_mixture_d5_fig2_bottom` — zero-mean MVN, d=5, Σ₀=I, Σ₁=0.25·I
 
 **Signed linear measurements (Fig 3 top):**
 - Draw `X ~ N(0, I)`, draw ground-truth `w*`
@@ -624,29 +673,29 @@ All datasets return `SyntheticDataset(X: float32, y: float32)` — a unified con
 
 ### Figure 1 (MNIST)
 
-- **Script:** `python -m src.experiments.fig1_mnist01`
-- **Dataset:** MNIST {0,1}, n_train=1000, n_test=500, d=784
-- **Model:** `LinearBinary(d=784)`, initialized to zero
-- **Comparison:** GD (`eta=0.01`, 500 steps) vs NGD (`eta=0.01`, 500 steps)
-- **Outputs:** `runs/fig1_mnist01_seed<N>/figure1_like.png`, `summary.json`
-- **Plot:** 2 panels — training loss (log scale) and test error vs iteration
+- **Script:** `python -m src.experiments.fig1_mnist01 [--seed N] [--steps 100]`
+- **Dataset:** MNIST {0,1}, n_train=1000, full test split, d=784
+- **Model:** `TwoLayerFixedA(m=50, d=784)`, same initialization for both runs
+- **Comparison:** GD (`eta=30.0`, 100 steps) vs NGD (`eta=5.0`, 100 steps)
+- **Outputs:** `runs/fig1_mnist01_seed<N>/figure1_like.png`, `summary.json`, `gd/` and `ngd/` subdirs
+- **Plot:** 3 panels — training loss (log scale), test error (%), and weight norm vs iteration
 
-### Figure 2 (Synthetic X-shaped)
+### Figure 2 (Synthetic)
 
 - **Script:** `python -m src.experiments.fig2_synthetic [--seed N] [--steps_top 1000] [--steps_bottom 2000]`
-- **Datasets:** `x_shaped_d2_fig2_top` (d=2) and `x_shaped_d5_fig2_bottom` (d=5)
+- **Datasets:** `x_shaped_d2_fig2_top` (d=2, top) and `gaussian_mixture_d5_fig2_bottom` (d=5, bottom)
 - **Model:** `TwoLayerFixedA`, m=50 (top) / m=100 (bottom)
-- **Comparison:** GD vs NGD, both at `eta=3.0` (top) / `eta=5.0` (bottom)
+- **Comparison:** GD vs NGD; `eta_gd=8.0 / eta_ngd=3.0` (top); `eta_gd=35.0 / eta_ngd=2.0` (bottom)
 - **Outputs:** `runs/fig2_synth_seed<N>/figure2_like.png`, `summary.json`
 - **Plot:** 2×2 — scatter plots (left) and training loss log-scale curves (right)
 
 ### Figure 3 (Stochastic NGD)
 
 - **Script:** `python -m src.experiments.fig3_sngd [--seed N] [--steps_linear 500] [--steps_nn 1000]`
-- **Top:** Linear model on signed measurements, 5 batch sizes with paper-specified eta
-- **Bottom:** TwoLayerFixedA (m=50) on X-shaped data (d=2, n=40), 5 batch sizes
-- **Outputs:** `runs/fig3_sngd_seed<N>/figure3_like.png`, `summary.json`, per-run `metrics.csv`
-- **Plot:** 2×2 — linear loss, test error, scatter plot, NN loss
+- **Top:** `LinearBinary(d=50)` on signed measurements (n=100), test set 3000 samples; 5 batch sizes
+- **Bottom:** `TwoLayerFixedA(m=50)` on `x_shaped_d2_fig2_top` (d=2, n=40); 5 batch sizes
+- **Outputs:** `runs/fig3_sngd_seed<N>/figure3_like.png`, `summary.json`, per-run subdirs with `metrics.csv` and `meta.json`
+- **Plot:** 2×2 — linear training loss (log), test error, x-shaped data scatter, NN training loss (log)
 
 ---
 
