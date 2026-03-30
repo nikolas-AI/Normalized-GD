@@ -6,7 +6,7 @@
   "n_train": 1000,
   "params": {
     "batch_size": null,
-    "eta": 5.0,
+    "eta": 5,
     "eval_every": 1,
     "optim": "ngd",
     "seed": 0,

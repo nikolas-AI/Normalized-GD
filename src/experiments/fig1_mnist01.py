@@ -52,7 +52,7 @@ def main() -> None:
         ds.y_train,
         X_test=ds.X_test,
         y_test=ds.y_test,
-        params=TrainParams(optim="ngd", eta=5.0, steps=args.steps, eval_every=1, seed=args.seed),
+        params=TrainParams(optim="ngd", eta=5, steps=args.steps, eval_every=1, seed=args.seed),
         run_dir=run_dir / "ngd",
         metadata={"figure": 1},
     )
@@ -66,6 +66,7 @@ def main() -> None:
     plt.semilogy(it_ngd, [r["train_loss"] for r in ngd_hist], label="Normalized GD")
     plt.title("Training Loss")
     plt.xlabel("Iteration")
+    # plt.ylim(1e-10, 0)
     plt.legend()
 
     plt.subplot(1, 3, 2)
@@ -73,7 +74,7 @@ def main() -> None:
     plt.plot(it_ngd, [100.0 * r.get("test_error", 0.0) for r in ngd_hist], label="Normalized GD")
     plt.title("Test Error (%)")
     plt.xlabel("Iteration")
-    plt.ylim(0, 1.5)
+    plt.ylim(0, 1.2)
     plt.legend()
 
     plt.subplot(1, 3, 3)
