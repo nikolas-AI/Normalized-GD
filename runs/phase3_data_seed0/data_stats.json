@@ -1,0 +1,55 @@
+{
+  "mnist01": {
+    "X_test_shape": [
+      2115,
+      784
+    ],
+    "X_train_shape": [
+      1000,
+      784
+    ],
+    "y_test_unique": [
+      -1.0,
+      1.0
+    ],
+    "y_train_unique": [
+      -1.0,
+      1.0
+    ]
+  },
+  "synthetic": {
+    "fig2_bottom": {
+      "X_shape": [
+        40,
+        5
+      ],
+      "y_unique": [
+        -1.0,
+        1.0
+      ]
+    },
+    "fig2_top": {
+      "X_shape": [
+        40,
+        2
+      ],
+      "y_unique": [
+        -1.0,
+        1.0
+      ]
+    },
+    "fig3_linear": {
+      "X_shape": [
+        100,
+        50
+      ],
+      "w_star_shape": [
+        50
+      ],
+      "y_unique": [
+        -1.0,
+        1.0
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "d": 784,
+  "metadata": {
+    "figure": 1
+  },
+  "n_train": 1000,
+  "params": {
+    "batch_size": null,
+    "eta": 5.0,
+    "eval_every": 1,
+    "optim": "ngd",
+    "seed": 0,
+    "shuffle": true,
+    "steps": 100
+  }
+}

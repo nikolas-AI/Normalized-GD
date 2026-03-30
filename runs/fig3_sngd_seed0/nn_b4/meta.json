@@ -1,0 +1,17 @@
+{
+  "d": 2,
+  "metadata": {
+    "figure": 3,
+    "model": "two_layer_nn"
+  },
+  "n_train": 40,
+  "params": {
+    "batch_size": 4,
+    "eta": 0.5,
+    "eval_every": 1,
+    "optim": "sngd",
+    "seed": 0,
+    "shuffle": true,
+    "steps": 1000
+  }
+}

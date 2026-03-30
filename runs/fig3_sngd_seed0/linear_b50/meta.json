@@ -1,0 +1,17 @@
+{
+  "d": 50,
+  "metadata": {
+    "figure": 3,
+    "model": "linear"
+  },
+  "n_train": 100,
+  "params": {
+    "batch_size": 50,
+    "eta": 0.5,
+    "eval_every": 1,
+    "optim": "sngd",
+    "seed": 0,
+    "shuffle": true,
+    "steps": 500
+  }
+}

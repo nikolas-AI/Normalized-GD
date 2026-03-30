@@ -1,0 +1,31 @@
+{
+  "data": {
+    "dataset": "synthetic_linear",
+    "n_train": 5,
+    "root": null,
+    "seed": 0
+  },
+  "loss": {
+    "type": "exp"
+  },
+  "model": {
+    "alpha": 0.2,
+    "d": 3,
+    "ell": 1.0,
+    "init_norm": "unit_per_neuron",
+    "init_type": "gaussian",
+    "m": 4
+  },
+  "optim": {
+    "batch_size": null,
+    "eta": 5.0,
+    "type": "ngd"
+  },
+  "resolved_device": "cpu",
+  "seed": 0,
+  "train": {
+    "device": "auto",
+    "eval_every": 1,
+    "steps": 1
+  }
+}
