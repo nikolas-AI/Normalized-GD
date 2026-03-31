@@ -9,6 +9,7 @@ from src.data.mnist01 import get_mnist01_splits
 from src.data.synthetic import (
     gaussian_mixture_d2_fig2_top,
     gaussian_mixture_d5_fig2_bottom,
+    x_shaped_d2_fig2_top,
     signed_linear_measurements,
 )
 from src.utils.io import make_run_dir, save_json
@@ -51,6 +52,7 @@ def main() -> None:
 
     # Synthetic datasets for Fig.2 and Fig.3 setup
     ds2_top = gaussian_mixture_d2_fig2_top(seed=args.seed)
+    # ds2_top = x_shaped_d2_fig2_top()
     ds2_bot = gaussian_mixture_d5_fig2_bottom(seed=args.seed)
     ds3_lin, w_star = signed_linear_measurements(seed=args.seed)
 
