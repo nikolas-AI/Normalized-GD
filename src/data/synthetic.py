@@ -7,11 +7,19 @@ import torch
 
 @dataclass(frozen=True)
 class SyntheticDataset:
+    """Container for a synthetic binary classification dataset.
+
+    Attributes:
+        X: Feature matrix of shape ``(n, d)``, float32.
+        y: Labels in ``{+1, -1}`` of shape ``(n,)``, float32.
+    """
+
     X: torch.Tensor  # (n,d) float32
     y: torch.Tensor  # (n,) float32 in {+1,-1}
 
 
 def _labels_pm1(n0: int, n1: int, *, device=None) -> torch.Tensor:
+    """Build a label vector with ``n0`` entries of ``-1`` followed by ``n1`` entries of ``+1``."""
     y0 = -torch.ones(n0, device=device)
     y1 = torch.ones(n1, device=device)
     return torch.cat([y0, y1], dim=0).to(torch.float32)
@@ -69,6 +77,20 @@ def gaussian_mixture_zero_mean(
 
 
 def gaussian_mixture_d2_fig2_top(*, n: int = 40, seed: int = 0, device: torch.device | None = None) -> SyntheticDataset:
+    """Generate the d=2 GMM dataset used in Fig. 2 (top) of the paper.
+
+    Each class is a zero-mean Gaussian elongated along one diagonal direction,
+    producing an X-shaped scatter plot. Class −1 is elongated along [1, −1]
+    and class +1 along [1, 1].
+
+    Args:
+        n: Total number of samples (must be even).
+        seed: Random seed.
+        device: Target device for the returned tensors.
+
+    Returns:
+        :class:`SyntheticDataset` with ``X`` of shape ``(n, 2)``.
+    """
     d = 2
     # X-shaped GMM: each class is a zero-mean Gaussian elongated along one diagonal.
     # Sigma = lambda_large * u*u^T + lambda_small * v*v^T
@@ -81,6 +103,18 @@ def gaussian_mixture_d2_fig2_top(*, n: int = 40, seed: int = 0, device: torch.de
 
 
 def gaussian_mixture_d5_fig2_bottom(*, n: int = 40, seed: int = 0, device: torch.device | None = None) -> SyntheticDataset:
+    """Generate the d=5 GMM dataset used in Fig. 2 (bottom) of the paper.
+
+    Class −1 has covariance ``I`` and class +1 has covariance ``¼I``.
+
+    Args:
+        n: Total number of samples (must be even).
+        seed: Random seed.
+        device: Target device for the returned tensors.
+
+    Returns:
+        :class:`SyntheticDataset` with ``X`` of shape ``(n, 5)``.
+    """
     d = 5
     Sigma0 = torch.eye(d)
     Sigma1 = 0.25 * torch.eye(d)

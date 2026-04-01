@@ -20,6 +20,17 @@ _ETA_NN = {1: 9, 4: 6, 10: 5, 20: 5, 40: 4}
 
 
 def _linear_dataset(seed: int):
+    """Build training and test tensors for the signed linear measurement problem (Fig. 3 top).
+
+    Generates a 100-sample training set with ``d=50`` via :func:`signed_linear_measurements`
+    and an independent 3 000-sample test set from the same ground-truth ``w*``.
+
+    Args:
+        seed: Random seed for both training and test generation.
+
+    Returns:
+        Tuple ``(X_train, y_train, X_test, y_test)`` as float32 tensors.
+    """
     tr, w_star = signed_linear_measurements(n=100, d=50, seed=seed)
     g = torch.Generator(device="cpu").manual_seed(seed + 1)
     Xte = torch.randn((3000, 50), generator=g)
@@ -28,6 +39,7 @@ def _linear_dataset(seed: int):
 
 
 def main() -> None:
+    """Run the Fig. 3 SNGD experiment across batch sizes and save a 2×2 summary plot."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--steps_linear", type=int, default=500)

@@ -10,6 +10,13 @@ from src.models.functional import phi as phi_fn
 
 @dataclass(frozen=True)
 class GradcheckResult:
+    """Gradient check outcome comparing autograd against finite differences.
+
+    Attributes:
+        max_abs_err: Maximum absolute element-wise error between the two gradient estimates.
+        max_rel_err: Maximum relative element-wise error between the two gradient estimates.
+    """
+
     max_abs_err: float
     max_rel_err: float
 
@@ -24,6 +31,23 @@ def finite_difference_grad_W(
     ell: float = 1.0,
     eps: float = 1e-5,
 ) -> torch.Tensor:
+    """Estimate ``∂L/∂W`` via central finite differences over every element of ``W``.
+
+    Computations are performed in float64 for numerical accuracy then cast back
+    to the original dtype of ``W``.
+
+    Args:
+        W: First-layer weights of shape ``(m, d)``.
+        a: Fixed second-layer weights of shape ``(m,)``.
+        X: Input batch of shape ``(n, d)``.
+        y: Labels of shape ``(n,)`` in ``{+1, -1}``.
+        alpha: Leaky ReLU negative slope.
+        ell: Leaky ReLU positive slope.
+        eps: Finite-difference step size.
+
+    Returns:
+        Gradient estimate tensor of the same shape as ``W``.
+    """
     g = torch.zeros_like(W)
     base_dtype = W.dtype
     W = W.detach().clone().to(dtype=torch.float64)
@@ -55,6 +79,25 @@ def gradcheck_autograd_vs_fd(
     atol: float = 1e-3,
     rtol: float = 1e-3,
 ) -> GradcheckResult:
+    """Assert that PyTorch autograd and finite-difference gradients agree for ``W``.
+
+    Args:
+        W: First-layer weights of shape ``(m, d)``.
+        a: Fixed second-layer weights of shape ``(m,)``.
+        X: Input batch of shape ``(n, d)``.
+        y: Labels of shape ``(n,)`` in ``{+1, -1}``.
+        alpha: Leaky ReLU negative slope.
+        ell: Leaky ReLU positive slope.
+        eps: Finite-difference step size.
+        atol: Absolute tolerance for :func:`torch.allclose`.
+        rtol: Relative tolerance for :func:`torch.allclose`.
+
+    Returns:
+        :class:`GradcheckResult` with the maximum absolute and relative errors.
+
+    Raises:
+        AssertionError: If the two gradients do not agree within ``atol``/``rtol``.
+    """
     W_ag = W.detach().clone().requires_grad_(True)
     phi = phi_fn(W_ag, a, X, alpha=alpha, ell=ell)
     loss = training_loss_exp(phi, y)

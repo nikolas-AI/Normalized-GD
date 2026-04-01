@@ -12,6 +12,15 @@ from src.optim.ngd import ngd_step, ngd_stepsize
 
 @dataclass(frozen=True)
 class DescentCheckResult:
+    """Result of a one-step descent check.
+
+    Attributes:
+        passed: True if the loss did not increase beyond tolerance.
+        F_current: Training loss before the step.
+        F_next: Training loss after the step.
+        eta_t: Effective step size used for the update.
+    """
+
     passed: bool
     F_current: float
     F_next: float
@@ -27,6 +36,25 @@ def one_step_descent_check(
     eta_base: float,
     tol: float = 1e-8,
 ) -> DescentCheckResult:
+    """Verify that a single optimiser step does not increase the training loss.
+
+    Applies one GD or NGD update in-place to ``model.W`` and compares the loss
+    before and after.
+
+    Args:
+        model: Neural network module with a trainable ``W`` parameter.
+        X: Training input tensor of shape ``(n, d)``.
+        y: Training labels of shape ``(n,)`` in ``{+1, -1}``.
+        optimizer_type: Either ``"gd"`` or ``"ngd"``.
+        eta_base: Base learning rate.
+        tol: Relative tolerance; the check passes if ``F_next <= F_current * (1 + tol)``.
+
+    Returns:
+        :class:`DescentCheckResult` summarising whether the check passed.
+
+    Raises:
+        ValueError: If ``optimizer_type`` is not recognised.
+    """
     model.W.grad = None
     phi = model(X)
     F_current_t = training_loss_exp(phi, y)

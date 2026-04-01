@@ -21,11 +21,15 @@ class ModelConfig:
 
 @dataclass(frozen=True)
 class LossConfig:
+    """Configuration for the loss function."""
+
     type: LossType = "exp"
 
 
 @dataclass(frozen=True)
 class OptimizerConfig:
+    """Configuration for the optimizer, including type, learning rate, and batch size."""
+
     type: OptimizerType
     eta: float
     batch_size: int | None = None
@@ -33,6 +37,8 @@ class OptimizerConfig:
 
 @dataclass(frozen=True)
 class DataConfig:
+    """Configuration for the dataset, including dataset name, root path, training size, and seed."""
+
     dataset: DatasetType
     root: str | None = None
     n_train: int | None = None
@@ -41,6 +47,8 @@ class DataConfig:
 
 @dataclass(frozen=True)
 class TrainConfig:
+    """Configuration for the training loop, including number of steps, evaluation frequency, and device."""
+
     steps: int
     eval_every: int = 1
     device: Literal["cpu", "cuda", "auto"] = "auto"
@@ -48,6 +56,8 @@ class TrainConfig:
 
 @dataclass(frozen=True)
 class ExperimentConfig:
+    """Top-level experiment configuration bundling model, loss, optimizer, data, and training settings."""
+
     model: ModelConfig
     loss: LossConfig
     optim: OptimizerConfig
@@ -56,6 +66,7 @@ class ExperimentConfig:
     seed: int = 0
 
     def validate(self) -> None:
+        """Validate all configuration fields, raising ValueError for any illegal combination."""
         if self.model.m <= 0:
             raise ValueError("model.m must be positive")
         if self.model.d <= 0:

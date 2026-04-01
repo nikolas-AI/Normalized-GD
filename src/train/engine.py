@@ -20,6 +20,18 @@ OptimType = Literal["gd", "ngd", "sngd"]
 
 @dataclass(frozen=True)
 class TrainParams:
+    """Hyperparameters controlling the training loop.
+
+    Attributes:
+        optim: Optimiser type — one of ``"gd"``, ``"ngd"``, or ``"sngd"``.
+        eta: Base learning rate.
+        steps: Total number of gradient steps to perform.
+        eval_every: Evaluate and record metrics every this many steps.
+        batch_size: Mini-batch size; required for ``sngd``.
+        shuffle: Whether to shuffle data before each pass (for ``sngd``).
+        seed: Random seed for the mini-batch generator.
+    """
+
     optim: OptimType
     eta: float
     steps: int
@@ -30,6 +42,7 @@ class TrainParams:
 
 
 def _full_loss(model, X: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    """Evaluate the full exponential training loss on the provided dataset."""
     return training_loss_exp(model(X), y)
 
 
@@ -44,6 +57,30 @@ def run_training(
     run_dir: str | Path | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> list[dict[str, float]]:
+    """Train a model and return per-step metric logs.
+
+    Runs ``params.steps`` gradient steps using the optimiser specified in
+    ``params.optim``. Metrics (loss, weight norm, optional test error) are
+    recorded every ``params.eval_every`` steps and at the final step.
+
+    Args:
+        model: Network module with a trainable ``W`` parameter.
+        X_train: Training features of shape ``(n, d)``.
+        y_train: Training labels of shape ``(n,)`` in ``{+1, -1}``.
+        params: Training hyperparameters.
+        X_test: Optional test features for evaluation.
+        y_test: Optional test labels for evaluation.
+        run_dir: If provided, metrics and metadata are saved as CSV/JSON here.
+        metadata: Extra key-value pairs written to ``meta.json`` when ``run_dir`` is set.
+
+    Returns:
+        List of metric dicts, one per recorded step. Each dict contains at least
+        ``"iter"``, ``"train_loss"``, and ``"weight_norm"`` keys, and optionally
+        ``"test_error"`` when test data is supplied.
+
+    Raises:
+        ValueError: If ``params.steps`` is not positive or ``sngd`` is used without a valid ``batch_size``.
+    """
     if params.steps <= 0:
         raise ValueError("steps must be positive")
     if params.optim == "sngd" and (params.batch_size is None or params.batch_size <= 0):

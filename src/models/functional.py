@@ -13,6 +13,21 @@ def phi(
     alpha: float = 0.2,
     ell: float = 1.0,
 ) -> torch.Tensor:
+    """Compute the two-layer network output ``phi(x) = leaky_relu(x @ W^T) @ a``.
+
+    Args:
+        W: First-layer weight matrix of shape ``(m, d)``.
+        a: Fixed second-layer weights of shape ``(m,)``.
+        x: Input batch of shape ``(b, d)``.
+        alpha: Leaky ReLU negative slope.
+        ell: Leaky ReLU positive slope.
+
+    Returns:
+        Output tensor of shape ``(b,)``.
+
+    Raises:
+        ValueError: If tensor shapes are inconsistent.
+    """
     if W.ndim != 2:
         raise ValueError("W must have shape (m,d)")
     if a.ndim != 1:

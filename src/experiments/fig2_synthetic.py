@@ -13,6 +13,20 @@ from src.utils.seed import set_seed
 
 
 def _run_case(X, y, *, m: int, eta_gd: float, eta_ngd: float, steps: int, seed: int):
+    """Train both GD and NGD on a single dataset case and return their metric histories.
+
+    Args:
+        X: Feature matrix of shape ``(n, d)``.
+        y: Labels of shape ``(n,)`` in ``{+1, -1}``.
+        m: Number of hidden neurons.
+        eta_gd: Learning rate for GD.
+        eta_ngd: Learning rate for Normalised GD.
+        steps: Number of gradient steps for each optimiser.
+        seed: Random seed for weight initialisation.
+
+    Returns:
+        Tuple ``(hist_gd, hist_ngd)`` of metric log lists from :func:`run_training`.
+    """
     d = X.shape[1]
     set_seed(seed, deterministic=True)
     W0 = init_first_layer(m, d, normalize=True)
@@ -25,6 +39,7 @@ def _run_case(X, y, *, m: int, eta_gd: float, eta_ngd: float, steps: int, seed: 
 
 
 def main() -> None:
+    """Run the Fig. 2 experiment on both synthetic datasets and save a 2×2 comparison plot."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--steps_top", type=int, default=1000)

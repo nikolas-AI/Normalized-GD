@@ -14,6 +14,16 @@ from src.utils.seed import set_seed
 
 
 def _build_model(m: int, d: int, seed: int) -> TwoLayerFixedA:
+    """Construct and return a :class:`TwoLayerFixedA` model with unit-normalised first-layer weights.
+
+    Args:
+        m: Number of hidden neurons.
+        d: Input dimension.
+        seed: Random seed used to initialise both weight matrices.
+
+    Returns:
+        Initialised :class:`TwoLayerFixedA` model.
+    """
     set_seed(seed, deterministic=True)
     W = init_first_layer(m, d, normalize=True)
     a = init_second_layer(m)
@@ -21,6 +31,7 @@ def _build_model(m: int, d: int, seed: int) -> TwoLayerFixedA:
 
 
 def main() -> None:
+    """Train GD and Normalised GD on MNIST 0/1 and save a Fig. 1-style comparison plot."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--mnist_root", type=str, default="data")

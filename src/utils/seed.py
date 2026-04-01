@@ -8,6 +8,13 @@ import torch
 
 
 def set_seed(seed: int, deterministic: bool = True) -> None:
+    """Seed all random number generators (Python, NumPy, PyTorch) for reproducibility.
+
+    Args:
+        seed: Integer seed value to use across all RNG backends.
+        deterministic: If True, enables cuDNN deterministic mode and
+            ``torch.use_deterministic_algorithms`` for fully reproducible GPU ops.
+    """
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)

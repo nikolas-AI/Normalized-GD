@@ -17,6 +17,14 @@ from src.utils.seed import set_seed
 
 
 def _scatter2(X: torch.Tensor, y: torch.Tensor, *, title: str, path: str) -> None:
+    """Save a 2-D scatter plot of a binary dataset to disk.
+
+    Args:
+        X: Feature matrix; only the first two columns are plotted.
+        y: Labels in ``{+1, -1}``; used to colour the two classes.
+        title: Plot title.
+        path: Destination file path for the saved PNG.
+    """
     X = X.detach().cpu()
     y = y.detach().cpu()
     plt.figure(figsize=(4, 4))
@@ -31,6 +39,7 @@ def _scatter2(X: torch.Tensor, y: torch.Tensor, *, title: str, path: str) -> Non
 
 
 def main() -> None:
+    """Entry point: load all datasets, plot scatter visualisations, and save summary statistics."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--mnist_root", type=str, default="data")

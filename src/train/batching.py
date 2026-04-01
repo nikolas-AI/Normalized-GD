@@ -13,6 +13,22 @@ def iterate_minibatches(
     shuffle: bool = True,
     generator: torch.Generator | None = None,
 ) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
+    """Yield successive ``(X_batch, y_batch)`` mini-batches from a dataset.
+
+    Args:
+        X: Feature matrix of shape ``(n, d)``.
+        y: Label vector of shape ``(n,)``.
+        batch_size: Number of samples per batch.
+        shuffle: If True, samples are randomly permuted before batching.
+        generator: Optional :class:`torch.Generator` for reproducible shuffling.
+
+    Yields:
+        Tuples of ``(X_batch, y_batch)`` with ``X_batch`` of shape ``(batch_size, d)``
+        and ``y_batch`` of shape ``(batch_size,)`` (last batch may be smaller).
+
+    Raises:
+        ValueError: If shapes are inconsistent or ``batch_size`` is not positive.
+    """
     if X.ndim != 2:
         raise ValueError("X must be 2D")
     if y.ndim != 1:

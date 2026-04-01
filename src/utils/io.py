@@ -8,6 +8,16 @@ from typing import Any, Iterable
 
 
 def make_run_dir(base: str | Path = "runs", name: str | None = None) -> Path:
+    """Create and return a unique run directory under ``base``.
+
+    Args:
+        base: Root directory under which the run subdirectory is created.
+        name: Name for the run subdirectory. Defaults to a UTC timestamp
+            of the form ``YYYYMMDDTHHMMSSz``.
+
+    Returns:
+        Path to the newly created run directory.
+    """
     base_path = Path(base)
     base_path.mkdir(parents=True, exist_ok=True)
 
@@ -21,6 +31,12 @@ def make_run_dir(base: str | Path = "runs", name: str | None = None) -> Path:
 
 
 def save_json(path: str | Path, obj: Any) -> None:
+    """Serialize ``obj`` to a JSON file at ``path``, creating parent directories as needed.
+
+    Args:
+        path: Destination file path.
+        obj: JSON-serializable object to write.
+    """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("w", encoding="utf-8") as f:
@@ -29,6 +45,12 @@ def save_json(path: str | Path, obj: Any) -> None:
 
 
 def save_csv(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
+    """Write an iterable of dicts as a CSV file with a sorted header row.
+
+    Args:
+        path: Destination file path.
+        rows: Iterable of row dicts; column names are derived from the union of all keys.
+    """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     rows_list = list(rows)

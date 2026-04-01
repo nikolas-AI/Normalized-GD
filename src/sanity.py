@@ -18,6 +18,18 @@ from src.utils.seed import set_seed
 
 
 def _pick_device(choice: str) -> str:
+    """Resolve a device string to a concrete ``"cpu"`` or ``"cuda"`` string.
+
+    Args:
+        choice: One of ``"cpu"``, ``"cuda"``, or ``"auto"``. ``"auto"`` selects
+            CUDA when available, otherwise CPU.
+
+    Returns:
+        Resolved device string.
+
+    Raises:
+        ValueError: If ``choice`` is not a recognised option.
+    """
     if choice == "cpu":
         return "cpu"
     if choice == "cuda":
@@ -28,6 +40,7 @@ def _pick_device(choice: str) -> str:
 
 
 def main() -> None:
+    """Run a minimal sanity check: validate config, set seed, and verify determinism."""
     cfg = ExperimentConfig(
         model=ModelConfig(d=3, m=4, alpha=0.2, ell=1.0),
         loss=LossConfig(type="exp"),
